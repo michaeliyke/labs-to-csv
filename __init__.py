@@ -1,15 +1,18 @@
-import requests
+import requests, bs4
 from bs4 import BeautifulSoup as bs
 from setup import bs, Edge, EdgeOptions, EdgeService, EdgeDriverManager
 import setup, time, bs4
 from setup import save_file as save_local
+from typing import List, Dict, Union
+# Mytype = Dict[str, Union[str, List[str]]] -> {"name": "iyke", "names": ["Iyke", "Michael, Chukwuma"]}
 
 # Python fix not logged in
 driver = None
-page_objects = []
+HEADLESS: bool = False # Change to True to make the browser non-headless
+soup_objects: List[bs4.PageElement] = []
 
-TEST_NUMBER = 0
-visited_urls = []
+TEST_NUMBER: int = 0
+visited_urls: List[str] = []
 
 def check_disabled(tag_object: bs4.Tag):
   """Check if a tag has a class name 'disabled' """
@@ -22,7 +25,7 @@ def check_disabled(tag_object: bs4.Tag):
   return "disabled" in class_names
 
 
-def retrieve(url):
+def retrieve(url: str):
   global driver
   # initial run
 
@@ -36,92 +39,69 @@ def retrieve(url):
     driver.get(url)
     cookies = setup.get_cookies("cookies/www.cloudskillsboost.google_07-11-2022.json")
     
-    # Before this step will work clean up the json data as followes:
-    # "sameSite": "unspecified" => "sameSite": "None"
-    # "sameSite": "lax" => "sameSite": "Lax"
-    # TODO: Fix the above problem in the during transform
+    # If the correct_json script has not been run this step will fail
     setup.add_cookies(setup.transform_cookies(cookies), driver)
+
+    time.sleep(2)
     driver.refresh()
 
   else:
     driver.get(url)
 
-  page = bs(driver.page_source, "html.parser")
-  save_local(setup.name_local_file("cloudskillsbooks.html"), page.text)
-  
-  return page
+  return bs(driver.page_source, "html.parser")
 
 
 def initiate():
-  global TEST_NUMBER
   url = find_next()
 
-  if TEST_NUMBER > 5:
-    return
-  else:
-    print("TEST_NUMBER: ", TEST_NUMBER)
-    TEST_NUMBER += 1
-
   if not url:
-    save_csv()
+    dispose()
     return
-  page = retrieve(url=url)
-  page_objects.append(page)
+    
+  soup = retrieve(url=url)
+  soup_objects.append(soup)
   visited_urls.append(url)
 
+  save_local(setup.name_local_file("cloudskillsbooks.html"), str(soup))
   time.sleep(2)
   initiate()
 
 
-
-"""
-import requests
-from bs4 import BeautifulSoup as bs
-from setup import load_file as load, cls
-pg = bs(load("files/cloudskillboost.html"), "html.parser")
-"""
-
 def find_next():
-  # Furst run
-  if not visited_urls and not page_objects:
+  # First run
+  if not visited_urls and not soup_objects:
+    print("First Run")
     return "https://www.cloudskillsboost.google/profile/activity"
 
   # subsequent runs
-  if not page_objects:
+  if not soup_objects:
     raise Exception("Invalid run")
   
-  last_visited = page_objects[len(page_objects) - 1]
+  last_visited = soup_objects[len(soup_objects) - 1]
 
   if not isinstance(last_visited, bs4.Tag):
     raise ValueError("find_next(): Invalid page object")
   
-  prev_anchor = last_visited.select_one("nav.pagination .previous_page")
   next_anchor = last_visited.select_one("nav.pagination .next_page")
-
-  is_disabled_prev = check_disabled(prev_anchor)
   is_disabled_next = check_disabled(next_anchor)
 
-  if is_disabled_prev:
-    anchor = next_anchor.get("href")
-    return "https://www.cloudskillsboost.google{}".format(anchor if anchor else "")
-
   if is_disabled_next:
-    return
+    print("COMPLETED..")
+    return ""
+  
+  anchor = next_anchor.get("href")
+  return "https://www.cloudskillsboost.google{}".format(anchor if anchor else "")  
 
-  #02 Essential Google Cloud Infrastructure- Foundation\4. Virtual Machines
-  # video 10
-
-
-def collect(soup: bs):
-  """Collect desired information from a page object"""
-  pass
-
-
-def sort_fn():
-  """provide custom sorting of the data"""
-  pass
+#02 Essential Google Cloud Infrastructure- Foundation\4. Virtual Machines
+# video 10
 
 
-def save_csv():
-  """convert data to csv and save"""
-  sort_fn()
+def dispose():
+  global driver
+  driver.quit()
+
+  driver = None
+  global visited_urls
+
+  visited_urls = []
+  

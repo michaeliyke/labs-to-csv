@@ -9,25 +9,26 @@ from selenium.webdriver.edge.service import Service as EdgeService
 from webdriver_manager.microsoft import EdgeChromiumDriverManager as EdgeDriverManager
 from selenium.webdriver.common.by import By
 import json
+from pathlib import Path
 
 # IN-MEMORY for now
-local_files_store = []
-LOCAL_FILE_NAMES_COUNTER = 0
+LOCAL_FILES_STORE = []
 
 def cls():
   os.system("cls")
   return None
 
 
-def name_local_file(init_name=""):
-  global LOCAL_FILE_NAMES_COUNTER
-  if not init_name:
-    init_name = str(time.time()).replace(".", "")
-    name = "{}.{}.txt".format(LOCAL_FILE_NAMES_COUNTER, init_name)
+def name_local_file(initial_name=""):
+  time_str = str(time.time()).replace(".", "")
+
+  if not initial_name:
+    return "{}.txt".format(time_str)
+
   else:
-    name = "{}.{}".format(LOCAL_FILE_NAMES_COUNTER, init_name)
-  LOCAL_FILE_NAMES_COUNTER += 1
-  return name
+    p = Path(initial_name)
+    temp = str(p.resolve()).replace(".{}".format(p.suffix), "")
+    return "{}-{}.{}".format(temp, time_str, p.suffix)
 
 
 def save_file(file_name: str, content: str):
@@ -39,13 +40,13 @@ def save_file(file_name: str, content: str):
   if not file_name.startswith("files/"):
     file_name = "files/{}".format(file_name)
   
-  if file_name in local_files_store:
+  if file_name in LOCAL_FILES_STORE:
     return
 
   with open(file_name, "w") as f:
     f.write(content)
 
-  local_files_store.append(file_name)
+  LOCAL_FILES_STORE.append(file_name)
   print("{} has been saved".format(file_name))
 
 

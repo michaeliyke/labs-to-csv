@@ -6,3 +6,4 @@ drivers/
 files/
 *.ipynb
 
+*[.jpg,.jpeg,.png,.gif]
