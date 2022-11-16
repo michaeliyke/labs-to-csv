@@ -4,7 +4,12 @@ cookies/
 etc/
 drivers/
 files/
+activity/
+score/
 *.ipynb
 
-*[.jpg,.jpeg,.png,.gif]
+*.jpg
+*.jpeg
+*.png
+*.gif
 *test*.*
